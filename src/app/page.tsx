@@ -3,6 +3,11 @@ import React, {useState} from 'react';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 import {ChevronDown, Filter} from "lucide-react";
 import {cn} from "@/lib/utils";
+import {useQuery} from "@tanstack/react-query";
+import axios from "axios";
+import {QueryResult} from "@upstash/vector";
+import type {Product as TProduct} from "@/db";
+import Product from '@/components/Products/Product'
 
 
 const SORT_OPTIONS = [
@@ -24,7 +29,22 @@ const Page = () => {
     const [filter, setFilter] = useState({
         sort: 'none',
     })
-    console.log(filter)
+
+    const {data: products} = useQuery({
+        queryKey: ['products'],
+        queryFn: async () => {
+            const {data} = await axios.post<QueryResult<TProduct>[]>(
+                'http://localhost:3000/api/products', {
+                    filter: {
+                        sort: filter.sort,
+                    }
+                }
+            )
+
+            return data
+        }
+    })
+
     return (
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-baseline justify-between border-b border-gray-200 pb-6 pt-24">
@@ -58,10 +78,23 @@ const Page = () => {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <button className="-m-2 ml-4 p-2 text-gray-400 hover:text-gray-500 sm:ml-6 lg:hidden">
-                        <Filter className="h-5 w-5" />
+                        <Filter className="h-5 w-5"/>
                     </button>
                 </div>
             </div>
+            <section className="pb-24 pt-6">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
+                    {/*filters*/}
+                    <div></div>
+
+                    <ul className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                        {products?.map((product) => (
+                            // eslint-disable-next-line react/jsx-key
+                            <Product key={product.id} product={product.metadata!}/>
+                        ))}
+                    </ul>
+                </div>
+            </section>
         </main>
     );
 };
