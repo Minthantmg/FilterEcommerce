@@ -8,6 +8,8 @@ import axios from "axios";
 import {QueryResult} from "@upstash/vector";
 import type {Product as TProduct} from "@/db";
 import Product from '@/components/Products/Product'
+import ProductSkeleton from "@/components/Products/ProductSkeleton";
+import product from "@/components/Products/Product";
 
 
 const SORT_OPTIONS = [
@@ -34,13 +36,12 @@ const Page = () => {
         queryKey: ['products'],
         queryFn: async () => {
             const {data} = await axios.post<QueryResult<TProduct>[]>(
-                'http://localhost:3000/api/products', {
+                '/api/products', {
                     filter: {
                         sort: filter.sort,
                     }
                 }
             )
-
             return data
         }
     })
@@ -88,10 +89,15 @@ const Page = () => {
                     <div></div>
 
                     <ul className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-                        {products?.map((product) => (
-                            // eslint-disable-next-line react/jsx-key
-                            <Product key={product.id} product={product.metadata!}/>
-                        ))}
+                        {products
+                            ? products.map((product) => (
+                                // eslint-disable-next-line react/jsx-key
+                                <Product key={product.id} product={product.metadata!}/>
+                            ))
+                            : new Array(12)
+                                .fill(null)
+                                .map((_, i) => <ProductSkeleton key={i}/>)
+                        }
                     </ul>
                 </div>
             </section>
