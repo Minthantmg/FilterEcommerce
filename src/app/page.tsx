@@ -11,6 +11,7 @@ import Product from '@/components/Products/Product'
 import ProductSkeleton from "@/components/Products/ProductSkeleton";
 import product from "@/components/Products/Product";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
+import {ProductState} from "@/lib/validators/product-validator";
 
 
 const SORT_OPTIONS = [
@@ -40,6 +41,26 @@ const COLOR_FILTERS = {
     ] as const,
 }
 
+const PRICE_FILTERS = {
+    id: 'price',
+    name: 'Price',
+    options: [
+        {values: [0, 100], label: 'Any price'},
+        {values: [0, 20], label: 'Under 20$'},
+        {values: [0, 40], label: 'Under 40$'},
+    ] as const,
+}
+
+const SIZE_FILTERS = {
+    id: 'size',
+    name: 'Size',
+    options: [
+        {values: 'S', label: 'S'},
+        {values: 'M', label: 'M'},
+        {values: 'L', label: 'L'}
+    ],
+} as const
+
 const SUBCATEGORIES = [
     {name: "T-Shirts", selected: true, href: "#"},
     {name: "Hoodies", selected: false, href: "#"},
@@ -47,10 +68,17 @@ const SUBCATEGORIES = [
     {name: "Accessories", selected: false, href: "#"},
 ]
 
+const DEFAULT_CUSTOM_PRICE = [0, 100] as [number, number]
+
 const Page = () => {
-    const [filter, setFilter] = useState({
+    const [filter, setFilter] = useState<ProductState>({
+        color: ["beige", "blue", "green", "purple", "white"],
+        price: {isCustom: false, range: DEFAULT_CUSTOM_PRICE},
+        size: ["L", "M", "S"],
         sort: 'none',
     })
+
+    console.log(filter)
 
     const {data: products} = useQuery({
         queryKey: ['products'],
@@ -65,6 +93,26 @@ const Page = () => {
             return data
         }
     })
+
+    const applyArrayFilter = ({
+                                  category, value
+                              }: {
+        category: keyof Omit<typeof filter, "price" | "sort">
+        value: string
+    }) => {
+        const isFilterApplied = filter[category].includes(value as never)
+        if (isFilterApplied) {
+            setFilter((prev) => ({
+                ...prev,
+                [category]: prev[category].filter((v) => v !== value)
+            }))
+        } else {
+            setFilter((prev) => ({
+                ...prev,
+                [category]: prev[category], value
+            }))
+        }
+    }
 
     return (
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -87,12 +135,13 @@ const Page = () => {
                                             "text-gray-900 bg-gray-100": option.value === filter.sort,
                                             "text-gray-500": option.value !== filter.sort,
                                         })}
-                                        onClick={() => {
-                                            setFilter((prev) => ({
-                                                ...prev,
-                                                sort: option.value
-                                            }))
-                                        }}>
+                                    // onClick={() => {
+                                    //     setFilter((prev) => ({
+                                    //         ...prev,
+                                    //         sort: option.value
+                                    //     }))
+                                    // }}
+                                >
                                     {option.name}
                                 </button>
                             ))}
@@ -118,6 +167,7 @@ const Page = () => {
                             ))}
                         </ul>
                         <Accordion type='multiple' className="animate-none">
+                            {/*color filter*/}
                             <AccordionItem value='color'>
                                 <AccordionTrigger className="py-3 text-sm text-gray-400
                                 hover:text-gray-500">
@@ -127,11 +177,92 @@ const Page = () => {
                                     <ul className='space-y-4'>
                                         {COLOR_FILTERS.options.map((option, optionIdx) => (
                                             <li key={option.values} className="flex items-center">
-                                                <input type="checkbox" id={`color-${optionIdx}`}
-                                                       className="w-4 h-4 rounded border-gray-300 text-indigo-600
-                                                focus:ring-indigo-500"/>
+                                                <input
+                                                    type="checkbox"
+                                                    id={`color-${optionIdx}`}
+                                                    onChange={() => {
+                                                        applyArrayFilter({
+                                                            category: "color",
+                                                            value: option.values
+                                                        })
+                                                    }}
+                                                    checked={filter.color.includes(option.values)}
+                                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600
+                                                    focus:ring-indigo-500"/>
                                                 <label htmlFor={`color-${optionIdx}`}
-                                                className='ml-3 text-sm text-gray-600'>
+                                                       className='ml-3 text-sm text-gray-600'>
+                                                    {option.label}
+                                                </label>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </AccordionContent>
+                            </AccordionItem>
+
+                            {/*size filter*/}
+                            <AccordionItem value='size'>
+                                <AccordionTrigger className="py-3 text-sm text-gray-400
+                                hover:text-gray-500">
+                                    <span className="font-medium text-gray-900">Size</span>
+                                </AccordionTrigger>
+                                <AccordionContent className="pt-6 animate-none">
+                                    <ul className='space-y-4'>
+                                        {SIZE_FILTERS.options.map((option, optionIdx) => (
+                                            <li key={option.values} className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`size-${optionIdx}`}
+                                                    onChange={() => {
+                                                        applyArrayFilter({
+                                                            category: "size",
+                                                            value: option.values
+                                                        })
+                                                    }}
+                                                    checked={filter.size.includes(option.values)}
+                                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600
+                                                    focus:ring-indigo-500"/>
+                                                <label htmlFor={`color-${optionIdx}`}
+                                                       className='ml-3 text-sm text-gray-600'>
+                                                    {option.label}
+                                                </label>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </AccordionContent>
+                            </AccordionItem>
+
+                            {/*price filter*/}
+                            <AccordionItem value='price'>
+                                <AccordionTrigger className="py-3 text-sm text-gray-400
+                                hover:text-gray-500">
+                                    <span className="font-medium text-gray-900">Size</span>
+                                </AccordionTrigger>
+                                <AccordionContent className="pt-6 animate-none">
+                                    <ul className='space-y-4'>
+                                        {PRICE_FILTERS.options.map((option, optionIdx) => (
+                                            <li key={option.label} className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    id={`price-${optionIdx}`}
+                                                    onChange={() => {
+                                                        setFilter((prev) => ({
+                                                            ...prev,
+                                                            price: {
+                                                                isCustom: false,
+                                                                range: [...option.values]
+                                                            }
+                                                        }))
+                                                    }}
+                                                    checked={
+                                                        !filter.price.isCustom &&
+                                                        filter.price.range[0] === option.values[0] &&
+                                                        filter.price.range[1] === option.values[1]
+
+                                                    }
+                                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600
+                                                    focus:ring-indigo-500"/>
+                                                <label htmlFor={`color-${optionIdx}`}
+                                                       className='ml-3 text-sm text-gray-600'>
                                                     {option.label}
                                                 </label>
                                             </li>
