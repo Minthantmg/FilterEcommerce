@@ -1,5 +1,5 @@
 "use client"
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 import {ChevronDown, Filter} from "lucide-react";
 import {cn} from "@/lib/utils";
@@ -11,7 +11,7 @@ import Product from '@/components/Products/Product'
 import ProductSkeleton from "@/components/Products/ProductSkeleton";
 import product from "@/components/Products/Product";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
-import {ProductState} from "@/lib/validators/product-validator";
+import {ProductState} from "@/lib/validators/product-filter-validator";
 import {Slider} from "@/components/ui/slider";
 
 
@@ -81,7 +81,7 @@ const Page = () => {
 
     console.log(filter)
 
-    const {data: products} = useQuery({
+    const {data: products, refetch} = useQuery({
         queryKey: ['products'],
         queryFn: async () => {
             const {data} = await axios.post<QueryResult<TProduct>[]>(
@@ -89,7 +89,7 @@ const Page = () => {
                     filter: {
                         sort: filter.sort,
                         color: filter.color,
-                        price: filter.price,
+                        price: filter.price.range,
                         size: filter.size
                     }
                 }
@@ -97,6 +97,12 @@ const Page = () => {
             return data
         }
     })
+
+    const onSubmit = () => refetch()
+
+    useEffect(() => {
+        onSubmit()
+    }, [filter])
 
     const applyArrayFilter = ({
                                   category, value
@@ -116,6 +122,7 @@ const Page = () => {
                 [category]: prev[category], value
             }))
         }
+        onSubmit()
     }
     const minPrice = Math.min(filter.price.range[0], filter.price.range[1])
     const maxPrice = Math.max(filter.price.range[0], filter.price.range[1])
