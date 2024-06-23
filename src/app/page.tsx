@@ -1,5 +1,5 @@
 "use client"
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 import {ChevronDown, Filter} from "lucide-react";
 import {cn} from "@/lib/utils";
@@ -9,11 +9,11 @@ import {QueryResult} from "@upstash/vector";
 import type {Product as TProduct} from "@/db";
 import Product from '@/components/Products/Product'
 import ProductSkeleton from "@/components/Products/ProductSkeleton";
-import product from "@/components/Products/Product";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
 import {ProductState} from "@/lib/validators/product-filter-validator";
 import {Slider} from "@/components/ui/slider";
-
+import debounce from "lodash.debounce"
+import EmptyState from "@/components/Products/EmptyState";
 
 const SORT_OPTIONS = [
     {
@@ -100,9 +100,8 @@ const Page = () => {
 
     const onSubmit = () => refetch()
 
-    useEffect(() => {
-        onSubmit()
-    }, [filter])
+    const debounceSubmit = debounce(onSubmit, 400)
+    const _debouncedSubmit = useCallback(debounceSubmit, [])
 
     const applyArrayFilter = ({
                                   category, value
@@ -122,7 +121,7 @@ const Page = () => {
                 [category]: prev[category], value
             }))
         }
-        onSubmit()
+        _debouncedSubmit()
     }
     const minPrice = Math.min(filter.price.range[0], filter.price.range[1])
     const maxPrice = Math.max(filter.price.range[0], filter.price.range[1])
@@ -148,12 +147,15 @@ const Page = () => {
                                             "text-gray-900 bg-gray-100": option.value === filter.sort,
                                             "text-gray-500": option.value !== filter.sort,
                                         })}
-                                    // onClick={() => {
-                                    //     setFilter((prev) => ({
-                                    //         ...prev,
-                                    //         sort: option.value
-                                    //     }))
-                                    // }}
+                                        onClick={() => {
+                                            // @ts-ignore
+                                            setFilter((prev) => ({
+                                                ...prev,
+                                                sort: option.value,
+                                            }))
+
+                                            _debouncedSubmit()
+                                        }}
                                 >
                                     {option.name}
                                 </button>
@@ -191,17 +193,17 @@ const Page = () => {
                                         {COLOR_FILTERS.options.map((option, optionIdx) => (
                                             <li key={option.values} className="flex items-center">
                                                 <input
-                                                    type="checkbox"
+                                                    type='checkbox'
                                                     id={`color-${optionIdx}`}
                                                     onChange={() => {
                                                         applyArrayFilter({
-                                                            category: "color",
-                                                            value: option.values
+                                                            category: 'color',
+                                                            value: option.values,
                                                         })
                                                     }}
                                                     checked={filter.color.includes(option.values)}
-                                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600
-                                                    focus:ring-indigo-500"/>
+                                                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+                                                />
                                                 <label htmlFor={`color-${optionIdx}`}
                                                        className='ml-3 text-sm text-gray-600'>
                                                     {option.label}
@@ -227,7 +229,7 @@ const Page = () => {
                                                     id={`size-${optionIdx}`}
                                                     onChange={() => {
                                                         applyArrayFilter({
-                                                            category: "size",
+                                                            category: 'size',
                                                             value: option.values
                                                         })
                                                     }}
@@ -265,6 +267,8 @@ const Page = () => {
                                                                 range: [...option.values]
                                                             }
                                                         }))
+
+                                                        _debouncedSubmit()
                                                     }}
                                                     checked={
                                                         !filter.price.isCustom &&
@@ -293,6 +297,8 @@ const Page = () => {
                                                                 range: [0, 100]
                                                             }
                                                         }))
+
+                                                        _debouncedSubmit()
                                                     }}
                                                     checked={filter.price.isCustom}
                                                     className="w-4 h-4 rounded border-gray-300 text-indigo-600
@@ -322,6 +328,7 @@ const Page = () => {
                                                                 range: [newMin, newMax]
                                                             }
                                                         }))
+                                                        _debouncedSubmit()
                                                     }}
                                                     value={filter.price.isCustom ? filter.price.range : DEFAULT_CUSTOM_PRICE}
                                                     min={DEFAULT_CUSTOM_PRICE[0]}
@@ -337,7 +344,7 @@ const Page = () => {
                     </div>
 
                     <ul className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-                        {products
+                        {products && products.length === 0 ? <EmptyState/> : products
                             ? products.map((product) => (
                                 // eslint-disable-next-line react/jsx-key
                                 <Product key={product.id} product={product.metadata!}/>
