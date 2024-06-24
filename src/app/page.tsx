@@ -25,6 +25,7 @@ import debounce from 'lodash.debounce'
 import {ChevronDown, Filter} from 'lucide-react'
 import {useCallback, useState} from 'react'
 
+//static data start
 const SORT_OPTIONS = [
     {name: 'None', value: 'none'},
     {name: 'Price: Low to High', value: 'price-asc'},
@@ -66,7 +67,6 @@ const PRICE_FILTERS = {
             value: [0, 40],
             label: 'Under 40€',
         },
-        // custom option defined in JSX
     ],
 } as const
 
@@ -78,6 +78,7 @@ const SUBCATEGORIES = [
 ]
 
 const DEFAULT_CUSTOM_PRICE = [0, 100] as [number, number]
+//static data end
 
 export default function Home() {
     const [filter, setFilter] = useState<ProductState>({
@@ -87,6 +88,7 @@ export default function Home() {
         sort: 'none',
     })
 
+    //data fetch from database
     const {data: products, refetch} = useQuery({
         queryKey: ['products'],
         queryFn: async () => {
@@ -111,21 +113,23 @@ export default function Home() {
     const debouncedSubmit = debounce(onSubmit, 400)
     const _debouncedSubmit = useCallback(debouncedSubmit, [])
 
-    const applyArrayFilter = ({
-                                  category,
-                                  value,
-                              }: {
+    //array filter for size and color
+    const applyArrayFilter = ({category, value}: {
         category: keyof Omit<typeof filter, 'price' | 'sort'>
         value: string
     }) => {
+
+        //Checks if the selected filter value already exists in the corresponding array of the filter object using includes().
         const isFilterApplied = filter[category].includes(value as never)
 
+        //If isFilterApplied (true): This means the value is already selected. The function removes it from the array.
         if (isFilterApplied) {
             setFilter((prev) => ({
                 ...prev,
                 [category]: prev[category].filter((v) => v !== value),
             }))
         } else {
+            //If isFilterApplied (false): This means the value is not yet selected. The function adds it to the array.
             setFilter((prev) => ({
                 ...prev,
                 [category]: [...prev[category], value],
